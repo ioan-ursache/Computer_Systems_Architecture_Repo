@@ -1,0 +1,54 @@
+     1                                  ; 7. Se dau trei şiruri de caractere. Sa se afişeze cel mai lung prefix comun pentru fiecare din cele trei perechi de cate doua şiruri ce se pot forma.
+     2                                  
+     3                                  bits 32 ; assembling for the 32 bits architecture
+     4                                  
+     5                                  ; declare the EntryPoint (a label defining the very first instruction of the program)
+     6                                  global start        
+     7                                  
+     8                                  ; declare external functions needed by our program
+     9                                  extern exit, printf               ; tell nasm that exit exists even if we won't be defining it
+    10                                  import exit msvcrt.dll    ; exit is a function that ends the calling process. It is defined in msvcrt.dll
+    11                                  import printf msvcrt.dll  ; msvcrt.dll contains exit, printf and all the other important C-runtime specific functions
+    12                                                            
+    13                                  ; our data is declared here (the variables needed by our program)
+    14                                  segment data use32 class=data
+    15 00000000 707265666978776F72-         s1 db "prefixword",0
+    15 00000009 6400               
+    16 0000000B 707265666978776F72-         s2 db "prefixwordsuffix",0
+    16 00000014 6473756666697800   
+    17 0000001C 707265666978776F72-         s3 db "prefixwordsufficient",0
+    17 00000025 647375666669636965-
+    17 0000002E 6E7400             
+    18                                      len1 equ $-s1
+    19                                      len2 equ $-s2
+    20                                      len3 equ $-s3
+    21                                      
+    22                                      
+    23                                      
+    24 00000031 54686520737472696E-         entryformat db "The strings chosen are:", 10, "1. %s", 10,"2. %s", 10, "3. %s", 0
+    24 0000003A 67732063686F73656E-
+    24 00000043 206172653A0A312E20-
+    24 0000004C 25730A322E2025730A-
+    24 00000055 332E20257300       
+    25 0000005B 546865206D6178696D-         exitformat db "The maximum prefix length found in the strings is %d", 0
+    25 00000064 756D20707265666978-
+    25 0000006D 206C656E6774682066-
+    25 00000076 6F756E6420696E2074-
+    25 0000007F 686520737472696E67-
+    25 00000088 7320697320256400   
+    26                                  
+    27                                  ; our code starts here
+    28                                  segment code use32 class=code
+    29                                      start:
+    30 00000000 68[1C000000]                    push s3
+    31 00000005 68[0B000000]                    push s2
+    32 0000000A 68[00000000]                    push s1
+    33 0000000F 68[31000000]                    push entryformat
+    34 00000014 FF15[00000000]                  call [printf]
+    35 0000001A 83C410                          add esp, 4*4 ; clear stack
+    36                                          
+    37                                          
+    38                                          
+    39                                          ; exit(0)
+    40 0000001D 6A00                            push    dword 0      ; push the parameter for exit onto the stack
+    41 0000001F FF15[00000000]                  call    [exit]       ; call exit to terminate the program

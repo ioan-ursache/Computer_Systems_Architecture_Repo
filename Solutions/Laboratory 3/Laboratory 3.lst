@@ -1,0 +1,60 @@
+     1                                  bits 32 ; assembling for the 32 bits architecture
+     2                                  
+     3                                  ; declare the EntryPoint (a label defining the very first instruction of the program)
+     4                                  global start
+     5                                  
+     6                                  ; declare external functions needed by our program
+     7                                  extern exit ; tell nasm that exit exists even if we won't be defining it
+     8                                  import exit msvcrt.dll ; exit is a function that ends the calling process. It is defined in msvcrt.dll
+     9                                  
+    10                                  ; our data is declared here (the variables needed by our program)
+    11                                  segment data use32 class=data
+    12 00000000 010503080209                s db 1, 5, 3, 8, 2, 9 ; initial sequence
+    13                                      l equ $-s ; length of S (which is 6)
+    14                                      
+    15                                      ; The maximum possible length of D1 and D2 is l/2
+    16                                      ; Since l is 6, max length is 3. l is too large for allocation.
+    17                                      ; But using 'l' as size is safe since we only write up to index l/2 - 1.
+    18 00000006 00<rept>                    d1 times l db 0 ; elements from even positions of S
+    19 0000000C 00<rept>                    d2 times l db 0 ; elements from odd positions of S
+    20                                  
+    21                                  segment code use32 class=code
+    22                                      start:
+    23                                          
+    24 00000000 B906000000                      mov ecx, l ; insert length of s into ecx
+    25                                          
+    26 00000005 BE00000000                      mov esi, 0 ; Read index for S (0-based)
+    27 0000000A BF00000000                      mov edi, 0 ; Write index for D1 (even positions)
+    28 0000000F BB00000000                      mov ebx, 0 ; Write index for D2 (odd positions)
+    29                                          
+    30 00000014 E322                            jecxz empty_seq ; jump if sequence is empty
+    31                                          
+    32                                          split:
+    33                                              ; Check the current read index (esi) for parity (even/odd)
+    34 00000016 89F0                                mov eax, esi
+    35 00000018 A901000000                          test eax, 1 ; Check the least significant bit (1 if odd, 0 if even)
+    36                                              
+    37                                              ; Read the element from S
+    38 0000001D 8A86[00000000]                      mov al, [s+esi]
+    39                                              
+    40 00000023 7409                                jz is_even_pos ; Jump if result of TEST is 0 (even position)
+    41                                              
+    42                                              is_odd_pos:
+    43 00000025 8883[0C000000]                          mov [d2+ebx], al ; Copy element to D2 at index ebx
+    44 0000002B 43                                      inc ebx ; Increment D2 write index
+    45 0000002C EB07                                    jmp next_element
+    46                                              
+    47                                              is_even_pos:
+    48 0000002E 8887[06000000]                          mov [d1+edi], al ; Copy element to D1 at index edi
+    49 00000034 47                                      inc edi ; Increment D1 write index
+    50                                              
+    51                                              next_element:
+    52 00000035 46                                      inc esi ; Increment S read index
+    53                                                  
+    54 00000036 E2DE                            loop split ; Decrement ecx and loop if not zero
+    55                                          
+    56                                          empty_seq:
+    57                                          
+    58                                          ; exit
+    59 00000038 6A00                            push dword 0 ; push the parameter for exit onto the stack
+    60 0000003A FF15[00000000]                  call [exit] ; call exit to terminate the program

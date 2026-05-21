@@ -1,0 +1,108 @@
+     1                                  ; Se dau cuvintele A si B. Se cere cuvântul C format astfel:
+     2                                  
+     3                                  ;- biţii 0-2 ai lui C coincid cu biţii 10-12 ai lui B
+     4                                  
+     5                                  ;- biţii 3-6 ai lui C au valoarea 1
+     6                                  
+     7                                  ;- biţii 7-10 ai lui C coincid cu biţii 1-4 ai lui A
+     8                                  
+     9                                  ;- biţii 11-12 ai valoarea 0
+    10                                  
+    11                                  ;- biţii 13-15 ai lui C coincid cu inversul biților 9-11 ai lui B
+    12                                  
+    13                                  
+    14                                  ; Vom obține cuvântul C prin operații succesive de "izolare". Numim operația
+    15                                  
+    16                                  ; de izolare a biţilor 10-12 ai lui B, păstrarea intacta a valorii acestor
+    17                                  
+    18                                  ; biţi, si inițializarea cu 0 a celorlalți biţi. Operațiunea de izolare se
+    19                                  
+    20                                  ; realizează cu ajutorul operatorului AND între cuvântul B şi masca
+    21                                  
+    22                                  ; 0001110000000000. Odată biții izolați, printr-o operație de rotire se
+    23                                  
+    24                                  ; deplasează grupul de biți doriți in poziția dorita. Cuvântul final se
+    25                                  
+    26                                  ; obține prin aplicarea operatorului OR între rezultatele intermediare
+    27                                  
+    28                                  ; obținute in urma izolării şi rotirii.
+    29                                  
+    30                                  ; Observație: rangul biților se numără de la dreapta la stânga
+    31                                  
+    32                                  
+    33                                  bits 32 ;asamblare si compilare pentru arhitectura de 32 biţi
+    34                                  
+    35                                  ; definim punctul de intrare in programul principal
+    36                                  
+    37                                  global start
+    38                                  
+    39                                  
+    40                                  extern exit ; indicăm asamblorului că exit există, chiar daca noi nu o vom defini
+    41                                  
+    42                                  import exit msvcrt.dll; exit este o funcție care încheie procesul, este definita in msvcrt.dll
+    43                                  
+    44                                  ; msvcrt.dll conține exit, printf şi toate celelalte funcții C-runtime importante
+    45                                  
+    46                                  segment data use32 class=data ; segmentul de date în care se vor defini variabilele
+    47                                  
+    48 00000000 5777                    a dw 0111011101010111b
+    49                                  
+    50 00000002 BE9B                    b dw 1001101110111110b
+    51                                  
+    52 00000004 0000                    c dw 0
+    53                                  
+    54                                  segment code use32 class=code ; segmentul de cod
+    55                                  
+    56                                  start:
+    57                                  
+    58                                  
+    59 00000000 66BB0000                mov bx, 0 ; în registrul BX vom calcula rezultatul
+    60                                  
+    61                                  
+    62 00000004 66A1[02000000]          mov ax, [b] ; izolăm biții 10-12 ai lui b
+    63                                  
+    64 0000000A 6625001C                and ax, 0001110000000000b
+    65                                  
+    66 0000000E B10A                    mov cl, 10
+    67                                  
+    68 00000010 66D3C8                  ror ax, cl ; rotim 10 poziții spre dreapta
+    69                                  
+    70 00000013 6609C3                  or bx, ax ; punem biţii in rezultat
+    71                                  
+    72                                  
+    73 00000016 6683CB78                or bx, 0000000001111000b ; facem biţi 3-6 din rezultat să aibă valoarea 1
+    74                                  
+    75                                  
+    76 0000001A 66A1[00000000]          mov ax, [a] ; izolăm biții 1-4 ai lui a
+    77                                  
+    78 00000020 6683E01E                and ax, 0000000000011110b
+    79                                  
+    80 00000024 B106                    mov cl, 6
+    81                                  
+    82 00000026 66D3C0                  rol ax, cl ; rotim 6 poziții spre stânga
+    83                                  
+    84 00000029 6609C3                  or bx, ax ; punem biții în rezultat
+    85                                  
+    86                                  
+    87 0000002C 6681E3FFE7              and bx, 1110011111111111b ; facem biţi 11-12 din rezultat să aibă valoarea 0
+    88                                  
+    89                                  
+    90 00000031 66A1[02000000]          mov ax, [b]
+    91                                  
+    92 00000037 66F7D0                  not ax ; inversăm valoarea lui b
+    93                                  
+    94 0000003A 6625000E                and ax, 0000111000000000b ; izolăm biţi 9-11 ai lui b
+    95                                  
+    96 0000003E B104                    mov cl, 4
+    97                                  
+    98 00000040 66D3C0                  rol ax, cl ; deplasăm biții 4 poziții spre stânga
+    99                                  
+   100 00000043 6609C3                  or bx, ax ; punem biţii în rezultat
+   101                                  
+   102                                  
+   103 00000046 66891D[04000000]        mov [c], bx ; punem valoarea din registru în variabila rezultat
+   104                                  
+   105                                  
+   106 0000004D 6A00                    push dword 0 ;se pune pe stivă codul de retur al funcției exit
+   107                                  
+   108 0000004F FF15[00000000]          call [exit] ;apelul funcției sistem exit pentru terminarea execuției programului

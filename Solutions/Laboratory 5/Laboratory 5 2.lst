@@ -1,0 +1,133 @@
+     1                                  ; 5. Se da un fişier text. Sa se citeasca continutul fişierului, sa se contorizeze numărul de caractere speciale şi sa se afiseze aceasta valoare. Numele fişierului text este definit in segmentul de date.
+     2                                  
+     3                                  bits 32 ; assembling for the 32 bits architecture
+     4                                  
+     5                                  ; declare the EntryPoint (a label defining the very first instruction of the program)
+     6                                  global start        
+     7                                  
+     8                                  ; declare external functions needed by our program
+     9                                  extern exit, fopen, fclose, fread, printf               ; tell nasm that exit exists even if we won't be defining it
+    10                                  import exit msvcrt.dll    ; exit is a function that ends the calling process. It is defined in msvcrt.dll
+    11                                                            ; msvcrt.dll contains exit, printf and all the other important C-runtime specific functions
+    12                                  import fopen msvcrt.dll
+    13                                  import fclose msvcrt.dll
+    14                                  import fread msvcrt.dll
+    15                                  import printf msvcrt.dll
+    16                                  
+    17                                  ; our data is declared here (the variables needed by our program)
+    18                                  segment data use32 class=data
+    19 00000000 736563762E74787400          nume_fisier db "secv.txt", 0
+    20 00000009 7200                        mod_citire db "r", 0
+    21                                      
+    22                                      dim_buffer equ 1000
+    23 0000000B 00<rept>                    buffer times dim_buffer db 0
+    24                                      
+    25 000003F3 4E756D6172756C2064-         format_rezultat db "Numarul de caractere speciale este: %d", 0
+    25 000003FC 652063617261637465-
+    25 00000405 726520737065636961-
+    25 0000040E 6C6520657374653A20-
+    25 00000417 256400             
+    26                                      
+    27 0000041A 00000000                    handle_fisier dd 0 ; descriptorul de fisier
+    28                                      
+    29 0000041E 00000000                    contor_speciale dd 0
+    30                                  
+    31                                  ; our code starts here
+    32                                  segment code use32 class=code
+    33                                      start:
+    34                                          ; 1. Deschidem fisierul
+    35 00000000 68[09000000]                    push dword mod_citire
+    36 00000005 68[00000000]                    push dword nume_fisier
+    37 0000000A FF15[00000000]                  call [fopen] ; EAX = descriptor fisier 
+    38                                          
+    39 00000010 A3[1A040000]                    mov dword [handle_fisier], eax
+    40                                          
+    41                                          ; verificam eroare de citire (EAX = 0)
+    42 00000015 83F800                          cmp eax, 0
+    43 00000018 746C                            je final_inchidere ; iesire program
+    44                                      
+    45                                          ; 2. Citim continutul
+    46 0000001A FF35[1A040000]                  push dword [handle_fisier]
+    47 00000020 68E8030000                      push dword dim_buffer ;(max 1000)
+    48 00000025 6A01                            push dword 1 ; size (1 octet)
+    49 00000027 68[0B000000]                    push dword buffer
+    50 0000002C FF15[00000000]                  call [fread] ; EAX = nr. de octeti cititi
+    51                                          
+    52 00000032 89C3                            mov ebx, eax ; salvam nr. de octeti cititi
+    53                                          
+    54                                          ; 3. parcurgem si contorizam
+    55 00000034 BE[0B000000]                    mov esi, buffer ; ESI = adresa de inceput a bufferului
+    56 00000039 B900000000                      mov ecx, 0 ; ECX = contor
+    57                                          
+    58                                          loop_contor:
+    59 0000003E 83FB00                              cmp ebx, 0 ; verificare terminare buffer
+    60 00000041 7429                                je final_contor
+    61                                              
+    62 00000043 8A06                                mov al, byte[esi] ; AL = caracter curent
+    63                                              
+    64                                              ; Verificare !(litera, cifra, spatiu alb)
+    65                                              
+    66                                              ; Verificare ('a' <= Al <= 'z')
+    67 00000045 3C61                                cmp al, 'a'
+    68 00000047 7204                                jb nu_este_litera ; AL < 'a'
+    69 00000049 3C7A                                cmp al, 'z'
+    70 0000004B 761B                                jbe este_normal ; AL <= 'z'
+    71                                              
+    72                                              nu_este_litera:
+    73                                                  ; Verificare litera mare ('A' <= AL <= 'Z')
+    74 0000004D 3C41                                    cmp al, 'A'
+    75 0000004F 7204                                    jb nu_este_litera_mare
+    76 00000051 3C5A                                    cmp al, 'Z'
+    77 00000053 7613                                    jbe este_normal ; AL <= 'Z'
+    78                                              
+    79                                              nu_este_litera_mare:
+    80                                              ; Verificare cifra ('0' <= AL <= '9')
+    81 00000055 3C30                                cmp al, '0'
+    82 00000057 7204                                jb nu_este_cifra
+    83 00000059 3C39                                cmp al, '9'
+    84 0000005B 760B                                jbe este_normal ; AL <= '9'
+    85                                              
+    86                                              nu_este_cifra:
+    87                                              ; Verificare spatiu alb
+    88                                              ; Verificare spatiu
+    89 0000005D 3C20                                cmp al, ' '
+    90 0000005F 7407                                je este_normal ; este spatiu
+    91                                              
+    92                                              ; Verificare newline (10)
+    93 00000061 3C0A                                cmp al, 10
+    94 00000063 7403                                je este_normal
+    95                                              
+    96                                              ; Daca caracterul a trecut toate testele, este caracter speciale
+    97 00000065 41                                  inc ecx
+    98 00000066 EB00                                jmp continua_bucla
+    99                                              
+   100                                              este_normal:
+   101                                              ; Nu se intampla nimic
+   102                                              
+   103                                              continua_bucla:
+   104 00000068 46                                      inc esi ; trecem la urmatorul caracter
+   105 00000069 4B                                      dec ebx ; decrementam contorul de caractere ramase
+   106 0000006A EBD2                                    jmp loop_contor
+   107                                                  
+   108                                              final_contor:
+   109 0000006C 890D[1E040000]                      mov dword [contor_speciale], ecx ; salvam rezultatul
+   110                                              
+   111                                              ; 4. Afisare
+   112 00000072 FF35[1E040000]                      push dword [contor_speciale]
+   113 00000078 68[F3030000]                        push dword format_rezultat
+   114 0000007D FF15[00000000]                      call [printf]
+   115 00000083 83C408                              add esp, 4*2
+   116                                          
+   117                                          final_inchidere:
+   118                                              ; 4. inchidem fisierul
+   119 00000086 833D[1A040000]00                    cmp dword [handle_fisier], 0
+   120 0000008D 740F                                je final_exit ;nu se inchide daca nu a fost deschis
+   121                                              
+   122 0000008F FF35[1A040000]                      push dword [handle_fisier]
+   123 00000095 FF15[00000000]                      call [fclose]
+   124 0000009B 83C404                              add esp, 4*1
+   125                                              
+   126                                          final_exit:
+   127                                              ; exit(0)
+   128 0000009E 6A00                                push    dword 0      ; push the parameter for exit onto the stack
+   129 000000A0 FF15[00000000]                      call    [exit]       ; call exit to terminate the program
